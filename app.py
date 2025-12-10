@@ -87,9 +87,8 @@ def load_rag_pipeline():
     with st.spinner("Loading meta-llama/Llama-3.2-3B model from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="Qwen/Qwen3-0.6B", 
+                repo_id="JetBrains/Mellum-4b-base", 
                 huggingfacehub_api_token=hf_token,
-                task="conversational",
                 max_new_tokens=512
             )
         except Exception as e:
