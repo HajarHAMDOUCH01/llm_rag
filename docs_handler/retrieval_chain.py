@@ -54,8 +54,7 @@ class RAGPipeline:
             device_map="auto" if self.device == "cuda" else None,
         )
         
-        if self.device == "cpu":
-            model = model.to("cpu")
+        model = model.to(self.device)
         
         # Create text generation pipeline
         text_gen_pipeline = pipeline(
@@ -138,7 +137,7 @@ def main():
     rag = RAGPipeline(
         vector_db_path=VECTOR_DB_PATH,
         model_name=MODEL_NAME,
-        device="cpu"  # Change to "cpu" if no GPU
+        device="cuda"  # Change to "cpu" if no GPU
     )
     
     # Test queries
