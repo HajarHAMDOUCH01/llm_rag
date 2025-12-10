@@ -89,7 +89,7 @@ def load_rag_pipeline():
             llm = HuggingFaceEndpoint(
                 repo_id="Qwen/Qwen3-0.6B", 
                 huggingfacehub_api_token=hf_token,
-                task="conversational"
+                task="conversational",
                 max_new_tokens=512
             )
         except Exception as e:
