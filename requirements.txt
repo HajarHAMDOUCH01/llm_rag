@@ -5,6 +5,7 @@ langchain-classic
 langchain-text-splitters
 langchain-community
 langchain-huggingface
+huggingface-hub
 
 # Hugging Face Models & Transformers
 transformers
