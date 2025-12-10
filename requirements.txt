@@ -10,7 +10,7 @@ torch
 sentence-transformers
 
 # Vector Database
-faiss-gpu
+faiss-cpu
 
 # PDF Processing
 pypdf
