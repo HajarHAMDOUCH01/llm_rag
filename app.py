@@ -123,29 +123,31 @@ Answer:"""
     return chain
 
 def process_query(question, model_id):
-    """Process user question through RAG pipeline"""
     chain = load_rag_pipeline(model_id)
-    
+
     try:
         result = chain.invoke({"input": question})
-        
-        answer = result.get("answer", result.get("output", ""))
-        if not answer or answer.strip() == "":
+
+        answer = result.get("output_text", "")
+
+        if not answer.strip():
             return {
-                "answer": "❌ No response from model. Check your HF token or try again.",
-                "sources": []
+                "answer": "❌ Model did not return any text. Check chain output format.",
+                "sources": result.get("context", [])
             }
-        
+
         return {
             "answer": answer,
             "sources": result.get("context", [])
         }
+
     except Exception as e:
         st.error(f"Query error: {str(e)}")
         return {
             "answer": f"Error: {str(e)}",
             "sources": []
         }
+
 
 def rebuild_vector_db():
     """Rebuild vector database from PDFs"""
