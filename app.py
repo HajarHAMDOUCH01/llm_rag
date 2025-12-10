@@ -16,7 +16,7 @@ PDF_FOLDER = "./pdfs"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 SUPPORTED_MODELS = {
-    "microsoft/Fara-7B": "microsoft/Fara-7B"
+    "Qwen/Qwen3-0.6B"
 }
 
 
@@ -89,7 +89,7 @@ def load_rag_pipeline(model_id):
     with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="microsoft/Fara-7B",
+                repo_id="Qwen/Qwen3-0.6B",
                 temperature=0.3,
                 max_new_tokens=1024,
                 top_p=0.9
@@ -121,35 +121,50 @@ def process_query(question, model_id):
     chain = load_rag_pipeline(model_id)
     try:
         result = chain.invoke({"input": question})
+        
+        # Debug: Check what we actually got back
+        print("=" * 50)
+        print("Result type:", type(result))
+        print("Result:", result)
+        if isinstance(result, dict):
+            print("Result keys:", result.keys())
+        print("=" * 50)
 
-        answer = (
-            result.get("output_text") 
-            or result.get("answer") 
-            or result.get("output") 
-            or ""
-        )
+        # Handle different possible result types
+        if isinstance(result, dict):
+            answer = (
+                result.get("answer") 
+                or result.get("output") 
+                or result.get("output_text")
+                or str(result)  # Fallback to stringifying the dict
+            )
+        elif isinstance(result, str):
+            answer = result
+        else:
+            answer = str(result)
 
-        if not answer.strip():
+        if not answer or not answer.strip():
             answer = "❌ Model returned an empty response."
 
-        # This section is commented out - you're not returning anything!
-        # return {
-        #     "answer": answer,
-        #     "sources": result.get("context", [])
-        # }
-        
-        try:
-            print(answer)  # for debugging
-            print(answer.keys())
-        except Exception as e:
-            print(e)
+        # Get sources/context if available
+        sources = []
+        if isinstance(result, dict):
+            sources = result.get("context", []) or result.get("source_documents", [])
 
-    except Exception as e:
         return {
-            "answer": f"Error in function process_query : {e}",
-            "sources": []
+            "answer": answer,
+            "sources": sources
         }
 
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print("Full error traceback:")
+        print(error_details)
+        return {
+            "answer": f"Error: {str(e)}\n\nCheck console for details.",
+            "sources": []
+        }
 
 def rebuild_vector_db():
     """Rebuild vector database from PDFs"""
