@@ -16,12 +16,7 @@ PDF_FOLDER = "./pdfs"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 SUPPORTED_MODELS = {
-    "Hermes 2.5 – Mistral 7B": "NousResearch/Hermes-2.5-Mistral-7B",
-    "Mistral 7B Instruct": "mistralai/Mistral-7B-Instruct-v0.3",
-    "Mixtral 8x7B Instruct": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    "Zephyr 7B Beta": "HuggingFaceH4/zephyr-7b-beta",
-    "Llama 3 8B Instruct": "meta-llama/Llama-3-8b-instruct",
-    "Llama 2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
+    "microsoft/Fara-7B": "microsoft/Fara-7B"
 }
 
 
@@ -94,7 +89,7 @@ def load_rag_pipeline(model_id):
     with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="meta-llama/Llama-2-13b-chat-hf",
+                repo_id="microsoft/Fara-7B",
                 temperature=0.3,
                 max_new_tokens=1024,
                 top_p=0.9
