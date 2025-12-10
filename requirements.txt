@@ -1,26 +1,23 @@
 # Core LLM & RAG Framework
-langchain
-langchain-core
-langchain-classic
-langchain-text-splitters
-langchain-community
-langchain-huggingface
-huggingface-hub
+langchain==0.2.11
+langchain-core==0.2.11
+langchain-community==0.2.11
+langchain-huggingface==0.0.16
 
 # Hugging Face Models & Transformers
-transformers
-torch
-sentence-transformers
+transformers==4.41.2
+torch==2.3.1
+sentence-transformers==3.0.1
 
 # Vector Database
-faiss-cpu
+faiss-cpu==1.8.0
 
 # PDF Processing
-pypdf
+pypdf==4.1.1
 
 # Web Framework
-streamlit
+streamlit==1.39.0
 
 # Utilities
-python-dotenv
-tqdm
+python-dotenv==1.0.1
+tqdm==4.67.1
