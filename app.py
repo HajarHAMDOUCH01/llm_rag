@@ -152,9 +152,9 @@ def load_rag_pipeline(model_id):
                     llm = HuggingFaceEndpoint(
                         repo_id=model_id,
                         huggingfacehub_api_token=hf_token,
-                        task="text2text-generation",
+                        task="conversational",
                         temperature=0.5,
-                        max_new_tokens=512,
+                        max_new_tokens=1024,
                         top_p=0.9
                     )
                     
