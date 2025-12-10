@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import torch
-from langchain_huggingface import HuggingFaceHub
+from huggingface_hub import HuggingFaceHub
 
 # Configuration
 VECTOR_DB_PATH = "./vector_db"
