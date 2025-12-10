@@ -1,5 +1,7 @@
 # Core LLM & RAG Framework
 langchain
+langchain-core
+langchain-classic
 langchain-community
 langchain-huggingface
 
