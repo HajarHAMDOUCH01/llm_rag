@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import torch
-from langchain_community.llms import HuggingFaceHub
+from langchain_huggingface import HuggingFaceEndpoint
 
 # Configuration
 VECTOR_DB_PATH = "./vector_db"
@@ -83,9 +83,10 @@ def load_rag_pipeline():
         retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     
     with st.spinner("Loading Mistral-7B model from Hugging Face Inference..."):
-        llm = HuggingFaceHub(
+        llm = HuggingFaceEndpoint(
             repo_id="mistralai/Mistral-7B-Instruct-v0.3",
             huggingfacehub_api_token=hf_token,
+            task="text-generation",
             model_kwargs={"temperature": 0.7, "max_new_tokens": 256}
         )
     
