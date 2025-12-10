@@ -16,7 +16,7 @@ PDF_FOLDER = "./pdfs"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 SUPPORTED_MODELS = {
-    "Qwen/Qwen3-0.6B"
+    "Qwen/Qwen3-0.6B" : "Qwen/Qwen3-0.6B"
 }
 
 
