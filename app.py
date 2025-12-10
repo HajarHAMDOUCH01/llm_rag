@@ -111,15 +111,15 @@ def load_rag_pipeline(model_id):
             st.error(f"❌ Error: {str(e)}")
             st.stop()
     
-    # Build chain
     prompt_template = ChatPromptTemplate.from_template(
-        """Use the following context to answer the question. If the answer is not in the context, say "I don't have enough information."
+        """Given the following context, answer the question.
 
-Context: {context}
+    Context:
+    {context}
 
-Question: {input}
+    Question: {input}
 
-Answer:"""
+    Answer:"""
     )
     
     combine_docs_chain = create_stuff_documents_chain(llm, prompt_template)
@@ -130,64 +130,83 @@ Answer:"""
 def process_query(question, model_id):
     chain = load_rag_pipeline(model_id)
     try:
-        print(f"\n{'='*50}\nProcessing question: {question}\n{'='*50}")
+        print(f"\n{'='*60}")
+        print(f"Processing question: {question}")
+        print(f"Model: {model_id}")
+        print('='*60)
         
         result = chain.invoke({"input": question})
         
-        # Debug output
-        print(f"Result type: {type(result)}")
-        print(f"Result: {result}")
+        # Extensive debugging
+        print(f"\n--- Result Debug Info ---")
+        print(f"Type: {type(result)}")
+        print(f"Content: {result}")
         
         if isinstance(result, dict):
-            print(f"Result keys: {list(result.keys())}")
-            
-            # Try different possible keys
-            answer = None
-            for key in ["answer", "output", "output_text", "result"]:
-                if key in result and result[key]:
+            print(f"\nDictionary keys: {list(result.keys())}")
+            for key, value in result.items():
+                print(f"  {key}: {type(value)} - {str(value)[:100] if value else 'None'}")
+        
+        # Extract answer with multiple fallbacks
+        answer = None
+        sources = []
+        
+        if isinstance(result, dict):
+            # Try all possible answer keys
+            for key in ["answer", "output", "output_text", "result", "response"]:
+                if key in result:
                     answer = result[key]
-                    print(f"Found answer in key: {key}")
+                    print(f"\n✓ Found answer in key: '{key}'")
                     break
             
+            # Get sources
+            if "context" in result:
+                sources = result["context"]
+            elif "source_documents" in result:
+                sources = result["source_documents"]
+            
+            # If still no answer, look for any text-like value
             if not answer:
-                print("No answer found in standard keys, checking all values...")
-                # Look for any string value that looks like an answer
+                print("\n⚠ Standard keys not found, searching all values...")
                 for key, value in result.items():
-                    if isinstance(value, str) and len(value) > 10:
+                    if isinstance(value, str) and len(value.strip()) > 5:
                         answer = value
-                        print(f"Using value from key: {key}")
+                        print(f"✓ Using value from key: '{key}'")
                         break
-            
-            if not answer:
-                answer = f"⚠️ Model returned data but no answer found. Keys: {list(result.keys())}"
-            
-            sources = result.get("context", []) or result.get("source_documents", [])
-            
+        
         elif isinstance(result, str):
             answer = result
-            sources = []
-        else:
-            answer = f"Unexpected result type: {type(result)}"
-            sources = []
-
-        print(f"Final answer: {answer[:100]}...")
-        print(f"Sources count: {len(sources)}")
-        print("="*50 + "\n")
-
+            print("\n✓ Result is a string")
+        
+        # Final fallback
+        if not answer or (isinstance(answer, str) and not answer.strip()):
+            print("\n✗ No valid answer found!")
+            print(f"Full result: {result}")
+            answer = "⚠️ The model returned a response but I couldn't extract a valid answer. Please try rephrasing your question."
+        
+        print(f"\n--- Final Answer ---")
+        print(f"Answer length: {len(str(answer))}")
+        print(f"Answer preview: {str(answer)[:200]}")
+        print(f"Sources: {len(sources)}")
+        print('='*60 + '\n')
+        
         return {
-            "answer": answer,
+            "answer": str(answer),
             "sources": sources
         }
-
+        
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        print("\n" + "="*50)
-        print("ERROR in process_query:")
+        
+        print("\n" + "="*60)
+        print("❌ ERROR IN process_query:")
+        print("="*60)
         print(error_details)
-        print("="*50 + "\n")
+        print("="*60 + "\n")
+        
         return {
-            "answer": f"❌ Error: {str(e)}\n\nCheck console for full details.",
+            "answer": f"❌ Error: {str(e)}\n\nFull error:\n{error_details}",
             "sources": []
         }
 
