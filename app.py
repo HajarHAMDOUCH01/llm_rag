@@ -358,7 +358,7 @@ if user_input:
     with st.spinner("🤔 Thinking..."):
         try:
             result = process_query(user_input, selected_model_id)
-            
+            print(result)
             # Add assistant response to chat history
             st.session_state.messages.append({
                 "role": "assistant",
