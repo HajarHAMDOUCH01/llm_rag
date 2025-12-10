@@ -4,8 +4,9 @@ from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFacePipeline
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -16,7 +17,6 @@ VECTOR_DB_PATH = "./vector_db"
 PDF_FOLDER = "./pdfs"
 MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.3"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
-
 # Page config
 st.set_page_config(
     page_title="PDF RAG Chatbot",
@@ -101,39 +101,31 @@ def load_rag_pipeline():
         llm = HuggingFacePipeline(pipeline=text_gen_pipeline)
     
     # Build chain
-    prompt_template = """Use the following pieces of context to answer the question at the end. 
+    prompt_template = ChatPromptTemplate.from_template(
+        """Use the following pieces of context to answer the question at the end. 
 If you don't know the answer, just say that you don't know, don't try to make up an answer.
 
 Context:
 {context}
 
-Question: {question}
+Question: {input}
 
 Answer:"""
-    
-    PROMPT = PromptTemplate(
-        template=prompt_template,
-        input_variables=["context", "question"]
     )
     
-    chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever,
-        return_source_documents=True,
-        chain_type_kwargs={"prompt": PROMPT}
-    )
+    combine_docs_chain = create_stuff_documents_chain(llm, prompt_template)
+    chain = create_retrieval_chain(retriever, combine_docs_chain)
     
     return chain
 
 def process_query(question):
     """Process user question through RAG pipeline"""
     chain = load_rag_pipeline()
-    result = chain.invoke({"query": question})
+    result = chain.invoke({"input": question})
     
     return {
-        "answer": result["result"],
-        "sources": result.get("source_documents", [])
+        "answer": result.get("answer", result.get("output", "")),
+        "sources": result.get("context", [])
     }
 
 def rebuild_vector_db():
@@ -268,11 +260,21 @@ if send_button and user_input:
         
         # Format sources
         sources = []
-        for doc in result["sources"]:
-            sources.append({
-                "file": doc.metadata.get("source", "Unknown"),
-                "page": doc.metadata.get("page", "N/A"),
-            })
+        source_docs = result.get("sources", result.get("context", []))
+        
+        # Handle both list and Document objects
+        if source_docs:
+            for doc in source_docs:
+                if hasattr(doc, 'metadata'):
+                    sources.append({
+                        "file": doc.metadata.get("source", "Unknown"),
+                        "page": doc.metadata.get("page", "N/A"),
+                    })
+                else:
+                    sources.append({
+                        "file": "Unknown",
+                        "page": "N/A",
+                    })
         
         # Add assistant response to chat history
         st.session_state.messages.append({
