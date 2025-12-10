@@ -3,6 +3,7 @@ langchain
 langchain-core
 langchain-community
 langchain-huggingface
+huggingface-hub
 
 # Hugging Face Models & Transformers
 transformers
