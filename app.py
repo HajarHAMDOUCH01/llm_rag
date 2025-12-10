@@ -18,6 +18,7 @@ VECTOR_DB_PATH = "./vector_db"
 PDF_FOLDER = "./pdfs"
 MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.3"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
+
 # Page config
 st.set_page_config(
     page_title="PDF RAG Chatbot",
@@ -41,11 +42,11 @@ st.markdown("""
         border-left: 4px solid #2196F3;
     }
     .assistant-message {
-        background-color: #blue;
+        background-color: black;
         border-left: 4px solid #4CAF50;
     }
     .source-box {
-        background-color: #green;
+        background-color: black;
         padding: 0.75rem;
         border-radius: 0.25rem;
         margin-top: 0.5rem;
@@ -88,10 +89,7 @@ def load_rag_pipeline():
             llm = HuggingFaceEndpoint(
                 repo_id="mistralai/Mistral-7B-Instruct-v0.3",
                 huggingfacehub_api_token=hf_token,
-                task="conversational",
-                temperature=0.7,
-                max_new_tokens=256,
-                top_p=0.95
+                max_new_tokens=512
             )
         except Exception as e:
             st.error(f"Failed to load model: {str(e)}")
