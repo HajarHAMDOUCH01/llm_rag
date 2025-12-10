@@ -88,6 +88,7 @@ def load_rag_pipeline():
             llm = HuggingFaceEndpoint(
                 repo_id="mistralai/Mistral-7B-Instruct-v0.3",
                 huggingfacehub_api_token=hf_token,
+                task="conversational",
                 temperature=0.7,
                 max_new_tokens=256,
                 top_p=0.95
