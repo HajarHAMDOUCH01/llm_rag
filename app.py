@@ -37,15 +37,15 @@ st.markdown("""
         gap: 1rem;
     }
     .user-message {
-        background-color: #e3f2fd;
+        background-color: black;
         border-left: 4px solid #2196F3;
     }
     .assistant-message {
-        background-color: #f5f5f5;
+        background-color: #blue;
         border-left: 4px solid #4CAF50;
     }
     .source-box {
-        background-color: #fff9c4;
+        background-color: #green;
         padding: 0.75rem;
         border-radius: 0.25rem;
         margin-top: 0.5rem;
