@@ -96,7 +96,7 @@ def load_rag_pipeline(model_id):
             llm = HuggingFaceEndpoint(
                 repo_id="meta-llama/Llama-2-13b-chat-hf",
                 temperature=0.3,
-                max_tokens=1024,
+                max_new_tokens=1024,
                 top_p=0.9
             )
 
