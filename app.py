@@ -4,8 +4,8 @@ from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEndpoint
-from langchain_classic.chains import create_retrieval_chain
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -15,11 +15,12 @@ VECTOR_DB_PATH = "./vector_db"
 PDF_FOLDER = "./pdfs"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
+# Updated models that work with Inference API
 SUPPORTED_MODELS = {
-    "openai-community/gpt2" : "openai-community/gpt2"
+    "Mistral-7B-Instruct": "mistralai/Mistral-7B-Instruct-v0.2",
+    "Flan-T5-Large": "google/flan-t5-large",
+    "Flan-T5-Base": "google/flan-t5-base",
 }
-
-
 
 # Page config
 st.set_page_config(
@@ -40,15 +41,15 @@ st.markdown("""
         gap: 1rem;
     }
     .user-message {
-        background-color: black;
+        background-color: #1a1a1a;
         border-left: 4px solid #2196F3;
     }
     .assistant-message {
-        background-color: black;
+        background-color: #1a1a1a;
         border-left: 4px solid #4CAF50;
     }
     .source-box {
-        background-color: black;
+        background-color: #2a2a2a;
         padding: 0.75rem;
         border-radius: 0.25rem;
         margin-top: 0.5rem;
@@ -67,6 +68,7 @@ def load_rag_pipeline(model_id):
     if not hf_token:
         st.error("❌ HF_TOKEN environment variable not set.")
         st.info("📋 Get a token from: https://huggingface.co/settings/tokens")
+        st.info("📝 On Streamlit Cloud: Manage App → Secrets → Add HF_TOKEN")
         st.stop()
     
     with st.spinner("Loading embeddings model..."):
@@ -85,113 +87,119 @@ def load_rag_pipeline(model_id):
         )
         retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     
-    with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
+    with st.spinner(f"Loading {model_id}..."):
         try:
-            if "gpt2" in model_id.lower():
+            # Configure based on model type
+            if "flan-t5" in model_id.lower():
                 llm = HuggingFaceEndpoint(
                     repo_id=model_id,
                     huggingfacehub_api_token=hf_token,
-                    task="text-generation",
-                    temperature=0.7,
+                    task="text2text-generation",
+                    temperature=0.5,
                     max_new_tokens=256,
-                    do_sample=True,
-                    return_full_text=False  # Important for GPT-2
+                    top_p=0.9
                 )
-            else:
+                
+                prompt_template = ChatPromptTemplate.from_template(
+                    """Context: {context}
+
+Question: {input}
+
+Answer the question based only on the context above. Keep the answer concise."""
+                )
+            else:  # Mistral and other instruct models
                 llm = HuggingFaceEndpoint(
                     repo_id=model_id,
                     huggingfacehub_api_token=hf_token,
                     temperature=0.7,
-                    max_new_tokens=256
+                    max_new_tokens=512,
+                    top_p=0.9,
+                    repetition_penalty=1.1
+                )
+                
+                prompt_template = ChatPromptTemplate.from_template(
+                    """You are a helpful assistant. Answer the question based on the provided context.
+
+Context:
+{context}
+
+Question: {input}
+
+Answer:"""
                 )
             
-            st.success(f"✅ Model loaded!")
+            st.success(f"✅ Model loaded successfully!")
             
         except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+            st.error(f"❌ Failed to load model: {str(e)}")
+            
+            # Provide helpful error messages
+            error_msg = str(e).lower()
+            if "401" in error_msg or "unauthorized" in error_msg:
+                st.warning("🔑 Check your HF_TOKEN - authentication failed")
+            elif "404" in error_msg or "not found" in error_msg:
+                st.warning(f"🔍 Model not accessible. Try a different model.")
+            elif "rate limit" in error_msg:
+                st.warning("🚫 Rate limit exceeded. Wait a few minutes.")
+            else:
+                st.info("💡 Try using 'Flan-T5-Base' - it's more reliable")
+            
             st.stop()
     
-    prompt_template = ChatPromptTemplate.from_template(
-        """Given the following context, answer the question.
-
-    Context:
-    {context}
-
-    Question: {input}
-
-    Answer:"""
-    )
-    
+    # Build chain
     combine_docs_chain = create_stuff_documents_chain(llm, prompt_template)
     chain = create_retrieval_chain(retriever, combine_docs_chain)
     
     return chain
 
 def process_query(question, model_id):
+    """Process a user query through the RAG pipeline"""
     chain = load_rag_pipeline(model_id)
+    
     try:
         print(f"\n{'='*60}")
-        print(f"Processing question: {question}")
+        print(f"Question: {question}")
         print(f"Model: {model_id}")
         print('='*60)
         
+        # Invoke the chain
         result = chain.invoke({"input": question})
         
-        # Extensive debugging
-        print(f"\n--- Result Debug Info ---")
-        print(f"Type: {type(result)}")
-        print(f"Content: {result}")
+        # Debug output
+        print(f"\nResult type: {type(result)}")
+        print(f"Result keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
         
-        if isinstance(result, dict):
-            print(f"\nDictionary keys: {list(result.keys())}")
-            for key, value in result.items():
-                print(f"  {key}: {type(value)} - {str(value)[:100] if value else 'None'}")
-        
-        # Extract answer with multiple fallbacks
+        # Extract answer with fallbacks
         answer = None
         sources = []
         
         if isinstance(result, dict):
-            # Try all possible answer keys
+            # Try different possible keys
             for key in ["answer", "output", "output_text", "result", "response"]:
-                if key in result:
+                if key in result and result[key]:
                     answer = result[key]
-                    print(f"\n✓ Found answer in key: '{key}'")
+                    print(f"✓ Answer found in key: '{key}'")
                     break
             
-            # Get sources
+            # Extract sources
             if "context" in result:
                 sources = result["context"]
             elif "source_documents" in result:
                 sources = result["source_documents"]
             
-            # If still no answer, look for any text-like value
-            if not answer:
-                print("\n⚠ Standard keys not found, searching all values...")
-                for key, value in result.items():
-                    if isinstance(value, str) and len(value.strip()) > 5:
-                        answer = value
-                        print(f"✓ Using value from key: '{key}'")
-                        break
+            print(f"Sources found: {len(sources)}")
         
-        elif isinstance(result, str):
-            answer = result
-            print("\n✓ Result is a string")
-        
-        # Final fallback
+        # Validate answer
         if not answer or (isinstance(answer, str) and not answer.strip()):
-            print("\n✗ No valid answer found!")
-            print(f"Full result: {result}")
-            answer = "⚠️ The model returned a response but I couldn't extract a valid answer. Please try rephrasing your question."
+            answer = "⚠️ I couldn't generate a proper answer. Please try rephrasing your question."
+            print("⚠ No valid answer extracted")
+        else:
+            print(f"✓ Answer length: {len(str(answer))} chars")
         
-        print(f"\n--- Final Answer ---")
-        print(f"Answer length: {len(str(answer))}")
-        print(f"Answer preview: {str(answer)[:200]}")
-        print(f"Sources: {len(sources)}")
         print('='*60 + '\n')
         
         return {
-            "answer": str(answer),
+            "answer": str(answer).strip(),
             "sources": sources
         }
         
@@ -200,13 +208,23 @@ def process_query(question, model_id):
         error_details = traceback.format_exc()
         
         print("\n" + "="*60)
-        print("❌ ERROR IN process_query:")
-        print("="*60)
+        print("❌ ERROR:")
         print(error_details)
         print("="*60 + "\n")
         
+        # User-friendly error message
+        error_msg = str(e)
+        if "StopIteration" in error_msg:
+            user_error = "Model configuration error. Please try:\n1. Select 'Flan-T5-Base' model\n2. Clear cache and reload\n3. Check your HF_TOKEN"
+        elif "timeout" in error_msg.lower():
+            user_error = "Request timeout. The model might be loading. Please try again."
+        elif "rate" in error_msg.lower():
+            user_error = "Rate limit exceeded. Please wait a moment and try again."
+        else:
+            user_error = f"Error: {str(e)[:200]}"
+        
         return {
-            "answer": f"❌ Error: {str(e)}\n\nFull error:\n{error_details}",
+            "answer": f"❌ {user_error}",
             "sources": []
         }
 
@@ -253,7 +271,7 @@ def rebuild_vector_db():
         vector_store = FAISS.from_documents(chunks, embeddings)
         vector_store.save_local(VECTOR_DB_PATH)
     
-    st.success("Vector database rebuilt successfully!")
+    st.success("✅ Vector database rebuilt successfully!")
     st.cache_resource.clear()
 
 # Sidebar
@@ -265,7 +283,8 @@ with st.sidebar:
     selected_model_name = st.selectbox(
         "Choose a model:",
         options=list(SUPPORTED_MODELS.keys()),
-        index=0
+        index=1,  # Default to Flan-T5-Large
+        help="Flan-T5 models are recommended for best results"
     )
     selected_model_id = SUPPORTED_MODELS[selected_model_name]
     
@@ -286,24 +305,14 @@ with st.sidebar:
     This is a RAG (Retrieval-Augmented Generation) chatbot that answers questions 
     based on your PDF documents.
     """)
-    st.write(f"**Selected Model**: {selected_model_name}")
+    st.write(f"**Model**: {selected_model_name}")
     st.write("**Embeddings**: All-MiniLM-L6-v2")
     st.write("**Vector DB**: FAISS")
     
     st.divider()
-    st.subheader("📝 Setup Required")
-    st.write("""
-    1. Get a Hugging Face API token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-    2. Add it as an environment variable: `HF_TOKEN`
-    3. On Streamlit Cloud, use "Manage App" → "Secrets"
-    """)
 
 # Main chat interface
 st.title("📚 PDF RAG Chatbot")
-
-# Store selected model in session
-if "selected_model" not in st.session_state:
-    st.session_state.selected_model = selected_model_id
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -341,20 +350,10 @@ for message in st.session_state.messages:
         """, unsafe_allow_html=True)
 
 # Chat input
-col1, col2 = st.columns([0.9, 0.1])
-
-with col1:
-    user_input = st.text_input(
-        "Ask a question about your documents...",
-        placeholder="What is multi-output regression?",
-        label_visibility="collapsed"
-    )
-
-with col2:
-    send_button = st.button("Send", use_container_width=True, key="send")
+user_input = st.chat_input("Ask a question about your documents...")
 
 # Process user input
-if send_button and user_input:
+if user_input:
     # Add user message to chat history
     st.session_state.messages.append({
         "role": "user",
@@ -362,7 +361,7 @@ if send_button and user_input:
     })
     
     # Get response from RAG pipeline
-    with st.spinner("Thinking..."):
+    with st.spinner("🤔 Thinking..."):
         try:
             result = process_query(user_input, selected_model_id)
             
