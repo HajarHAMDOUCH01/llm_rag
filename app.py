@@ -19,7 +19,7 @@ EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 # Updated models that work with Inference API
 SUPPORTED_MODELS = {
-    "google/gemma-3-12b-it": "google/gemma-3-12b-it",
+    "Qwen/Qwen3-4B-Thinking-2507": "Qwen/Qwen3-4B-Thinking-2507",
     "Flan-T5-Large": "google/flan-t5-large",
     "Flan-T5-Base": "google/flan-t5-base",
 }
@@ -152,7 +152,7 @@ def load_rag_pipeline(model_id):
                     llm = HuggingFaceEndpoint(
                         repo_id=model_id,
                         huggingfacehub_api_token=hf_token,
-                        task="image-text-to-text",
+                        task="text2text-generation",
                         temperature=0.5,
                         max_new_tokens=512,
                         top_p=0.9
