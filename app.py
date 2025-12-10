@@ -15,16 +15,28 @@ VECTOR_DB_PATH = "./vector_db"
 PDF_FOLDER = "./pdfs"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
-# List of verified working models
 SUPPORTED_MODELS = {
-    "Mistral-7B": "mistralai/Mistral-7B",
-    "Meta Llama-2 7B Chat": "meta-llama/Llama-2-7b-chat-hf",
-    "Meta Llama-2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
-    "Google Flan-T5 Base": "google/flan-t5-base",
-    "Google Flan-T5 Large": "google/flan-t5-large",
-    "Huggingface Zephyr 7B": "HuggingFaceH4/zephyr-7b-beta",
+    # --- Recommended Open-Source Chat Models ---
+    "Zephyr 7B Alpha": "HuggingFaceH4/zephyr-7b-alpha",
+    "Zephyr 7B Beta": "HuggingFaceH4/zephyr-7b-beta",
+
+    "Llama 2 7B Chat": "meta-llama/Llama-2-7b-chat-hf",
+    "Llama 2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
+
+    # --- Mistral & Mixtral ---
+    "Mistral 7B Instruct v0.2": "mistralai/Mistral-7B-Instruct-v0.2",
+    "Mixtral 8x7B Instruct": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+
+    # --- Google UL2 & FLAN Series ---
+    "Flan-T5 Base": "google/flan-t5-base",
+    "Flan-T5 Large": "google/flan-t5-large",
+    "Flan-T5 XL": "google/flan-t5-xl",
+    "Flan-T5 XXL": "google/flan-t5-xxl",
+
+    # --- Hermes / NousResearch ---
     "NeuralHermes 2.5 7B": "NousResearch/Hermes-2.5-Mistral-7B",
 }
+
 
 # Page config
 st.set_page_config(
@@ -124,17 +136,18 @@ Answer:"""
 
 def process_query(question, model_id):
     chain = load_rag_pipeline(model_id)
-
     try:
         result = chain.invoke({"input": question})
 
-        answer = result.get("output_text", "")
+        answer = (
+            result.get("output_text") 
+            or result.get("answer") 
+            or result.get("output") 
+            or ""
+        )
 
         if not answer.strip():
-            return {
-                "answer": "❌ Model did not return any text. Check chain output format.",
-                "sources": result.get("context", [])
-            }
+            answer = "❌ Model returned an empty response."
 
         return {
             "answer": answer,
@@ -142,9 +155,8 @@ def process_query(question, model_id):
         }
 
     except Exception as e:
-        st.error(f"Query error: {str(e)}")
         return {
-            "answer": f"Error: {str(e)}",
+            "answer": f"Error: {e}",
             "sources": []
         }
 
