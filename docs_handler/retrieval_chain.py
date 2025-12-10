@@ -7,8 +7,11 @@ from langchain.prompts import PromptTemplate
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import torch
 
+import sys
+sys.path.append("/kaggle/working/llm_rag")
+
 # Configuration
-VECTOR_DB_PATH = "../vector_db"
+VECTOR_DB_PATH = "/kaggle/working/llm_rag/vector_db"
 MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.3"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 

@@ -6,9 +6,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import pickle
 
+import sys
+sys.path.append("/kaggle/working/llm_rag")
+
 # Configuration
-PDF_FOLDER = "../pdfs"  # Folder where your PDFs are stored
-VECTOR_DB_PATH = "../vector_db"  # Where to save the vector database
+PDF_FOLDER = "/kaggle/working/llm_rag/pdfs"  # Folder where your PDFs are stored
+VECTOR_DB_PATH = "/kaggle/working/llm_rag/vector_db"  # Where to save the vector database
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"  # Lightweight, fast embedding model
 
 def load_pdfs(pdf_folder):
