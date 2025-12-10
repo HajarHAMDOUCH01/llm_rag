@@ -257,8 +257,18 @@ def process_query(question, model_id):
         debug_info["steps"].append("Invoking chain with input...")
         log_debug("Invoking retrieval chain", "DEBUG")
         
-        result = chain.invoke({"input": question})
-        debug_info["steps"].append(f"✅ Chain invoked, result type: {type(result).__name__}")
+        try:
+            # Try to invoke with detailed error capture
+            result = chain.invoke({"input": question})
+            debug_info["steps"].append(f"✅ Chain invoked, result type: {type(result).__name__}")
+        except StopIteration as e:
+            debug_info["steps"].append(f"❌ StopIteration error during chain.invoke()")
+            debug_info["errors"].append(f"StopIteration: {str(e)}")
+            raise Exception("StopIteration error - Model did not return expected output. This usually means the model endpoint is not responding correctly. Try a different model or check HuggingFace API status.")
+        except Exception as invoke_error:
+            debug_info["steps"].append(f"❌ Chain invocation error: {type(invoke_error).__name__}")
+            debug_info["errors"].append(f"Invocation error: {str(invoke_error)}")
+            raise
         
         # STEP 3: Inspect result
         debug_info["steps"].append("Inspecting result structure...")
@@ -340,19 +350,26 @@ def process_query(question, model_id):
         
     except Exception as e:
         error_trace = traceback.format_exc()
-        debug_info["errors"].append(str(e))
-        debug_info["traceback"] = error_trace
-        debug_info["steps"].append(f"❌ FATAL ERROR: {str(e)}")
+        error_type = type(e).__name__
+        error_message = str(e) if str(e) else "No error message (empty exception)"
         
-        log_debug(f"Query processing failed: {str(e)}", "ERROR")
+        debug_info["errors"].append(f"{error_type}: {error_message}")
+        debug_info["traceback"] = error_trace
+        debug_info["steps"].append(f"❌ FATAL ERROR: {error_type} - {error_message}")
+        
+        log_debug(f"Query processing failed: {error_type} - {error_message}", "ERROR")
         print("\n" + "="*80)
+        print(f"ERROR TYPE: {error_type}")
+        print(f"ERROR MESSAGE: {error_message}")
         print("FULL ERROR TRACEBACK:")
         print(error_trace)
         print("="*80 + "\n")
         
         # Categorize error
-        error_msg = str(e).lower()
-        if "stopiteration" in error_msg:
+        error_msg = error_message.lower()
+        error_type_lower = error_type.lower()
+        
+        if "stopiteration" in error_type_lower or "stopiteration" in error_msg:
             user_error = "Model configuration error. The model didn't return expected output."
             suggestion = "Try: 1) Switch to 'Flan-T5-Base', 2) Clear cache (sidebar), 3) Check your HF_TOKEN"
         elif "timeout" in error_msg:
@@ -364,8 +381,11 @@ def process_query(question, model_id):
         elif "token" in error_msg or "auth" in error_msg:
             user_error = "Authentication error with Hugging Face."
             suggestion = "Check your HF_TOKEN in the environment variables."
+        elif not error_message or error_message == "No error message (empty exception)":
+            user_error = "Unknown error with empty message. Likely a StopIteration or generator issue."
+            suggestion = "1) Check console logs for full traceback, 2) Try 'Flan-T5-Large' instead, 3) Verify HuggingFace API status"
         else:
-            user_error = f"Unexpected error: {str(e)}"
+            user_error = f"Unexpected error ({error_type}): {error_message}"
             suggestion = "Check the debug information below for details."
         
         return {
@@ -521,6 +541,11 @@ for message in st.session_state.messages:
                 debug_html += "<strong style='color:#f44336;'>Errors:</strong><br/>"
                 for error in debug["errors"]:
                     debug_html += f"  {error}<br/>"
+            
+            if debug.get("traceback"):
+                debug_html += "<details><summary><strong>Full Traceback (click to expand)</strong></summary>"
+                debug_html += f"<pre style='font-size:0.8em;'>{debug['traceback']}</pre>"
+                debug_html += "</details>"
             
             debug_html += "</div>"
         
