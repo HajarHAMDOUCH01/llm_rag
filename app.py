@@ -4,8 +4,8 @@ from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEndpoint
-from langchain_classic.chains import create_retrieval_chain
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -96,16 +96,19 @@ def load_rag_pipeline(model_id):
                     huggingfacehub_api_token=hf_token,
                     task="text2text-generation",
                     temperature=0.5,
-                    max_new_tokens=256,
+                    max_new_tokens=512,  # Increased for better answers
                     top_p=0.9
                 )
                 
+                # Improved prompt template for Flan-T5
                 prompt_template = ChatPromptTemplate.from_template(
-                    """Context: {context}
+                    """Answer the question based on the context below. Be concise and informative.
+
+Context: {context}
 
 Question: {input}
 
-Answer the question based only on the context above. Keep the answer concise."""
+Answer:"""
                 )
             else:  # Mistral and other instruct models
                 llm = HuggingFaceEndpoint(
@@ -117,16 +120,11 @@ Answer the question based only on the context above. Keep the answer concise."""
                     repetition_penalty=1.1
                 )
                 
-                prompt_template = ChatPromptTemplate.from_template(
-                    """You are a helpful assistant. Answer the question based on the provided context.
-
-Context:
-{context}
-
-Question: {input}
-
-Answer:"""
-                )
+                # Improved prompt for instruct models
+                prompt_template = ChatPromptTemplate.from_messages([
+                    ("system", "You are a helpful assistant. Answer questions based on the provided context. Be clear and concise."),
+                    ("user", "Context: {context}\n\nQuestion: {input}\n\nAnswer:")
+                ])
             
             st.success(f"✅ Model loaded successfully!")
             
@@ -146,7 +144,7 @@ Answer:"""
             
             st.stop()
     
-    # Build chain
+    # Build chain - CRITICAL: This is the proper way to build the chain
     combine_docs_chain = create_stuff_documents_chain(llm, prompt_template)
     chain = create_retrieval_chain(retriever, combine_docs_chain)
     
@@ -162,39 +160,35 @@ def process_query(question, model_id):
         print(f"Model: {model_id}")
         print('='*60)
         
-        # Invoke the chain
+        # Invoke the chain with proper input format
         result = chain.invoke({"input": question})
         
         # Debug output
         print(f"\nResult type: {type(result)}")
         print(f"Result keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
         
-        # Extract answer with fallbacks
+        # According to LangChain docs, the result should have 'answer' and 'context' keys
         answer = None
         sources = []
         
         if isinstance(result, dict):
-            # Try different possible keys
-            for key in ["answer", "output", "output_text", "result", "response"]:
-                if key in result and result[key]:
-                    answer = result[key]
-                    print(f"✓ Answer found in key: '{key}'")
-                    break
+            # The 'answer' key is the standard output from create_retrieval_chain
+            if "answer" in result:
+                answer = result["answer"]
+                print(f"✓ Answer found in 'answer' key")
             
-            # Extract sources
+            # Extract sources from 'context' key
             if "context" in result:
                 sources = result["context"]
-            elif "source_documents" in result:
-                sources = result["source_documents"]
-            
-            print(f"Sources found: {len(sources)}")
+                print(f"✓ Found {len(sources)} source documents")
         
         # Validate answer
         if not answer or (isinstance(answer, str) and not answer.strip()):
-            answer = "⚠️ I couldn't generate a proper answer. Please try rephrasing your question."
+            answer = "⚠️ I couldn't generate a proper answer. Please try rephrasing your question or check if the documents contain relevant information."
             print("⚠ No valid answer extracted")
         else:
             print(f"✓ Answer length: {len(str(answer))} chars")
+            print(f"✓ Answer preview: {str(answer)[:100]}...")
         
         print('='*60 + '\n')
         
@@ -205,7 +199,7 @@ def process_query(question, model_id):
         
     except Exception as e:
         import traceback
-        error_details = str(e)
+        error_details = traceback.format_exc()
         
         print("\n" + "="*60)
         print("❌ ERROR:")
