@@ -87,7 +87,7 @@ def load_rag_pipeline():
     with st.spinner("Loading Mistral-7B model from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="mistralai/Mistral-7B-Instruct-v0.3",
+                repo_id="mistralai/Mistral-7B", 
                 huggingfacehub_api_token=hf_token,
                 max_new_tokens=512
             )
