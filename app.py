@@ -146,7 +146,7 @@ def process_query(question, model_id):
 
     except Exception as e:
         return {
-            "answer": f"Error: {e}",
+            "answer": f"Error in function process_query : {e}",
             "sources": []
         }
 
