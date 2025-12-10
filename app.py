@@ -3,25 +3,20 @@ import os
 from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFacePipeline
+from langchain_huggingface import HuggingFaceEndpoint
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import torch
-from langchain_huggingface import HuggingFaceEndpoint
 
 # Configuration
 VECTOR_DB_PATH = "./vector_db"
 PDF_FOLDER = "./pdfs"
-MODEL_NAME = "VMware/flan-t5-xl-alpaca"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 # List of verified working models
 SUPPORTED_MODELS = {
-    "flan-t5" : "VMware/flan-t5-xl-alpaca",
     "Mistral-7B": "mistralai/Mistral-7B",
     "Meta Llama-2 7B Chat": "meta-llama/Llama-2-7b-chat-hf",
     "Meta Llama-2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
