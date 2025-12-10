@@ -19,7 +19,7 @@ EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 # Updated models that work with Inference API
 SUPPORTED_MODELS = {
-    "Qwen/Qwen3-4B-Thinking-2507": "Qwen/Qwen3-4B-Thinking-2507",
+    "zai-org/GLM-4.6V-Flash": "zai-org/GLM-4.6V-Flash",
     "Flan-T5-Large": "google/flan-t5-large",
     "Flan-T5-Base": "google/flan-t5-base",
 }
