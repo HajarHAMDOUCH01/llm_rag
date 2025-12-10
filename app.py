@@ -62,8 +62,9 @@ def load_rag_pipeline():
     hf_token = os.getenv("HF_TOKEN")
     
     if not hf_token:
-        st.error("HF_TOKEN environment variable not set. Please add your Hugging Face API token.")
-        st.info("Get a token from: https://huggingface.co/settings/tokens")
+        st.error("❌ HF_TOKEN environment variable not set.")
+        st.info("📋 Get a token from: https://huggingface.co/settings/tokens")
+        st.info("📝 On Streamlit Cloud: Manage App → Secrets → Add HF_TOKEN")
         st.stop()
     
     with st.spinner("Loading embeddings model..."):
@@ -83,12 +84,17 @@ def load_rag_pipeline():
         retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     
     with st.spinner("Loading Mistral-7B model from Hugging Face Inference..."):
-        llm = HuggingFaceEndpoint(
-            repo_id="mistralai/Mistral-7B-Instruct-v0.3",
-            huggingfacehub_api_token=hf_token,
-            task="text-generation",
-            model_kwargs={"temperature": 0.7, "max_new_tokens": 256}
-        )
+        try:
+            llm = HuggingFaceEndpoint(
+                repo_id="mistralai/Mistral-7B-Instruct-v0.3",
+                huggingfacehub_api_token=hf_token,
+                temperature=0.7,
+                max_new_tokens=256,
+                top_p=0.95
+            )
+        except Exception as e:
+            st.error(f"Failed to load model: {str(e)}")
+            st.stop()
     
     # Build chain
     prompt_template = ChatPromptTemplate.from_template(
