@@ -362,7 +362,7 @@ if user_input:
             # Add assistant response to chat history
             st.session_state.messages.append({
                 "role": "assistant",
-                "content": result["answer"],
+                "content": result.get("answer", "hiiii"),
                 "sources": result.get("sources", [])
             })
         except Exception as e:
