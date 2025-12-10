@@ -87,43 +87,28 @@ def load_rag_pipeline(model_id):
     
     with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
         try:
-            # More explicit configuration
-            llm = HuggingFaceEndpoint(
-                repo_id=model_id,
-                huggingfacehub_api_token=hf_token,
-                task="text-generation",
-                temperature=0.7,
-                max_new_tokens=512,
-                top_p=0.95,
-                repetition_penalty=1.1
-            )
+            if "gpt2" in model_id.lower():
+                llm = HuggingFaceEndpoint(
+                    repo_id=model_id,
+                    huggingfacehub_api_token=hf_token,
+                    task="text-generation",
+                    temperature=0.7,
+                    max_new_tokens=256,
+                    do_sample=True,
+                    return_full_text=False  # Important for GPT-2
+                )
+            else:
+                llm = HuggingFaceEndpoint(
+                    repo_id=model_id,
+                    huggingfacehub_api_token=hf_token,
+                    temperature=0.7,
+                    max_new_tokens=256
+                )
             
-            # Test the connection
-            st.info("Testing model connection...")
-            test_response = llm.invoke("Test")
-            st.success(f"✅ Model loaded successfully!")
+            st.success(f"✅ Model loaded!")
             
-        except ImportError as e:
-            st.error(f"Import error: {str(e)}")
-            st.info("Try: pip install --upgrade langchain-huggingface huggingface-hub")
-            st.stop()
         except Exception as e:
-            st.error(f"❌ Failed to load model: {str(e)}")
-            st.error(f"Error type: {type(e).__name__}")
-            
-            # Provide specific troubleshooting
-            error_msg = str(e).lower()
-            if "401" in error_msg or "unauthorized" in error_msg:
-                st.warning("🔑 Authentication failed. Check your HF_TOKEN.")
-                st.info("Make sure your token has 'read' permissions.")
-            elif "404" in error_msg or "not found" in error_msg:
-                st.warning(f"🔍 Model '{model_id}' not found or not accessible.")
-                st.info("Try a different model or check if you have access.")
-            elif "timeout" in error_msg:
-                st.warning("⏱️ Connection timeout. Check your internet connection.")
-            elif "rate limit" in error_msg:
-                st.warning("🚫 Rate limit exceeded. Wait a few minutes and try again.")
-            
+            st.error(f"❌ Error: {str(e)}")
             st.stop()
     
     # Build chain
