@@ -89,23 +89,26 @@ def load_rag_pipeline(model_id):
     with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="openai-community/gpt2",
-                temperature=0.3,
-                max_new_tokens=1024,
-                top_p=0.9
+                repo_id=model_id,
+                temperature=0.7,
+                max_new_tokens=512,
+                top_p=0.95,
+                huggingfacehub_api_token=hf_token
             )
+            
+            # Test the model with a simple call
+            test_result = llm.invoke("Hello")
+            print(f"Model test successful: {test_result[:50]}...")
 
         except Exception as e:
             st.error(f"Failed to load model: {str(e)}")
             st.stop()
     
-    # Build chain
+    # Build chain with better prompt for GPT2
     prompt_template = ChatPromptTemplate.from_template(
-        """Use the following pieces of context to answer the question at the end. 
-If you don't know the answer, just say that you don't know, don't try to make up an answer.
+        """Based on the following context, answer the question. If you cannot find the answer in the context, say "I don't have enough information to answer that."
 
-Context:
-{context}
+Context: {context}
 
 Question: {input}
 
@@ -120,36 +123,49 @@ Answer:"""
 def process_query(question, model_id):
     chain = load_rag_pipeline(model_id)
     try:
+        print(f"\n{'='*50}\nProcessing question: {question}\n{'='*50}")
+        
         result = chain.invoke({"input": question})
         
-        # Debug: Check what we actually got back
-        print("=" * 50)
-        print("Result type:", type(result))
-        print("Result:", result)
+        # Debug output
+        print(f"Result type: {type(result)}")
+        print(f"Result: {result}")
+        
         if isinstance(result, dict):
-            print("Result keys:", result.keys())
-        print("=" * 50)
-
-        # Handle different possible result types
-        if isinstance(result, dict):
-            answer = (
-                result.get("answer") 
-                or result.get("output") 
-                or result.get("output_text")
-                or str(result)  # Fallback to stringifying the dict
-            )
+            print(f"Result keys: {list(result.keys())}")
+            
+            # Try different possible keys
+            answer = None
+            for key in ["answer", "output", "output_text", "result"]:
+                if key in result and result[key]:
+                    answer = result[key]
+                    print(f"Found answer in key: {key}")
+                    break
+            
+            if not answer:
+                print("No answer found in standard keys, checking all values...")
+                # Look for any string value that looks like an answer
+                for key, value in result.items():
+                    if isinstance(value, str) and len(value) > 10:
+                        answer = value
+                        print(f"Using value from key: {key}")
+                        break
+            
+            if not answer:
+                answer = f"⚠️ Model returned data but no answer found. Keys: {list(result.keys())}"
+            
+            sources = result.get("context", []) or result.get("source_documents", [])
+            
         elif isinstance(result, str):
             answer = result
+            sources = []
         else:
-            answer = str(result)
+            answer = f"Unexpected result type: {type(result)}"
+            sources = []
 
-        if not answer or not answer.strip():
-            answer = "❌ Model returned an empty response."
-
-        # Get sources/context if available
-        sources = []
-        if isinstance(result, dict):
-            sources = result.get("context", []) or result.get("source_documents", [])
+        print(f"Final answer: {answer[:100]}...")
+        print(f"Sources count: {len(sources)}")
+        print("="*50 + "\n")
 
         return {
             "answer": answer,
@@ -159,10 +175,12 @@ def process_query(question, model_id):
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        print("Full error traceback:")
+        print("\n" + "="*50)
+        print("ERROR in process_query:")
         print(error_details)
+        print("="*50 + "\n")
         return {
-            "answer": f"Error: {str(e)}\n\nCheck console for details.",
+            "answer": f"❌ Error: {str(e)}\n\nCheck console for full details.",
             "sources": []
         }
 
