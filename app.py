@@ -16,11 +16,12 @@ from langchain_huggingface import HuggingFaceEndpoint
 # Configuration
 VECTOR_DB_PATH = "./vector_db"
 PDF_FOLDER = "./pdfs"
-MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.3"
+MODEL_NAME = "VMware/flan-t5-xl-alpaca"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 # List of verified working models
 SUPPORTED_MODELS = {
+    "flan-t5" : "VMware/flan-t5-xl-alpaca",
     "Mistral-7B": "mistralai/Mistral-7B",
     "Meta Llama-2 7B Chat": "meta-llama/Llama-2-7b-chat-hf",
     "Meta Llama-2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
