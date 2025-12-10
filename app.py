@@ -84,10 +84,10 @@ def load_rag_pipeline():
         )
         retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     
-    with st.spinner("Loading Mistral-7B model from Hugging Face Inference..."):
+    with st.spinner("Loading meta-llama/Llama-3.2-3B model from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="mistralai/Mistral-7B-Instruct-v0.2", 
+                repo_id="meta-llama/Llama-3.2-3B", 
                 huggingfacehub_api_token=hf_token,
                 max_new_tokens=512
             )
