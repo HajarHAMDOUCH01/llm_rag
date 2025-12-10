@@ -16,7 +16,7 @@ PDF_FOLDER = "./pdfs"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 SUPPORTED_MODELS = {
-    "Qwen/Qwen3-0.6B" : "Qwen/Qwen3-0.6B"
+    "openai-community/gpt2" : "openai-community/gpt2"
 }
 
 
@@ -89,7 +89,7 @@ def load_rag_pipeline(model_id):
     with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="Qwen/Qwen3-0.6B",
+                repo_id="openai-community/gpt2",
                 temperature=0.3,
                 max_new_tokens=1024,
                 top_p=0.9
