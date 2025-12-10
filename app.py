@@ -39,11 +39,11 @@ st.markdown("""
     }
     .user-message {
         background-color: black;
-        border-left: 4px solid #2196F3;
+        border-left: 4px solid blue;
     }
     .assistant-message {
         background-color: black;
-        border-left: 4px solid #4CAF50;
+        border-left: 4px solid blue;
     }
     .source-box {
         background-color: black;
@@ -51,7 +51,7 @@ st.markdown("""
         border-radius: 0.25rem;
         margin-top: 0.5rem;
         font-size: 0.9rem;
-        border-left: 3px solid #FBC02D;
+        border-left: 3px solid blue;
     }
 </style>
 """, unsafe_allow_html=True)
