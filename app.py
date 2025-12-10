@@ -16,26 +16,14 @@ PDF_FOLDER = "./pdfs"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 SUPPORTED_MODELS = {
-    # --- Recommended Open-Source Chat Models ---
-    "Zephyr 7B Alpha": "HuggingFaceH4/zephyr-7b-alpha",
-    "Zephyr 7B Beta": "HuggingFaceH4/zephyr-7b-beta",
-
-    "Llama 2 7B Chat": "meta-llama/Llama-2-7b-chat-hf",
-    "Llama 2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
-
-    # --- Mistral & Mixtral ---
-    "Mistral 7B Instruct v0.2": "mistralai/Mistral-7B-Instruct-v0.2",
+    "Hermes 2.5 – Mistral 7B": "NousResearch/Hermes-2.5-Mistral-7B",
+    "Mistral 7B Instruct": "mistralai/Mistral-7B-Instruct-v0.3",
     "Mixtral 8x7B Instruct": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-
-    # --- Google UL2 & FLAN Series ---
-    "Flan-T5 Base": "google/flan-t5-base",
-    "Flan-T5 Large": "google/flan-t5-large",
-    "Flan-T5 XL": "google/flan-t5-xl",
-    "Flan-T5 XXL": "google/flan-t5-xxl",
-
-    # --- Hermes / NousResearch ---
-    "NeuralHermes 2.5 7B": "NousResearch/Hermes-2.5-Mistral-7B",
+    "Zephyr 7B Beta": "HuggingFaceH4/zephyr-7b-beta",
+    "Llama 3 8B Instruct": "meta-llama/Llama-3-8b-instruct",
+    "Llama 2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
 }
+
 
 
 # Page config
@@ -106,12 +94,12 @@ def load_rag_pipeline(model_id):
     with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id=model_id,
-                huggingfacehub_api_token=hf_token,
-                max_new_tokens=512,
-                temperature=0.7,
-                top_p=0.95
+                repo_id="meta-llama/Llama-2-13b-chat-hf",
+                temperature=0.3,
+                max_tokens=1024,
+                top_p=0.9
             )
+
         except Exception as e:
             st.error(f"Failed to load model: {str(e)}")
             st.stop()
@@ -149,10 +137,15 @@ def process_query(question, model_id):
         if not answer.strip():
             answer = "❌ Model returned an empty response."
 
-        return {
-            "answer": answer,
-            "sources": result.get("context", [])
-        }
+        # return {
+        #     "answer": answer,
+        #     "sources": result.get("context", [])
+        # }
+        try:
+            print(answer)  # for debugging
+            print(answer.keys())
+        except Exception as e:
+            print(e)
 
     except Exception as e:
         return {
