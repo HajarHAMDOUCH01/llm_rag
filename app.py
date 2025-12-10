@@ -11,6 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import torch
+from langchain_huggingface import HuggingFaceHub
 
 # Configuration
 VECTOR_DB_PATH = "./vector_db"
@@ -56,9 +57,14 @@ st.markdown("""
 
 @st.cache_resource
 def load_rag_pipeline():
-    """Load RAG pipeline once and cache it"""
+    """Load RAG pipeline using Hugging Face Inference API"""
     
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    hf_token = os.getenv("HF_TOKEN")
+    
+    if not hf_token:
+        st.error("HF_TOKEN environment variable not set. Please add your Hugging Face API token.")
+        st.info("Get a token from: https://huggingface.co/settings/tokens")
+        st.stop()
     
     with st.spinner("Loading embeddings model..."):
         embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
@@ -66,6 +72,7 @@ def load_rag_pipeline():
     with st.spinner("Loading vector database..."):
         if not os.path.exists(VECTOR_DB_PATH):
             st.error(f"Vector database not found at {VECTOR_DB_PATH}")
+            st.info("Run the setup script first: `python docs_handler.py`")
             st.stop()
         
         vector_store = FAISS.load_local(
@@ -75,30 +82,12 @@ def load_rag_pipeline():
         )
         retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     
-    with st.spinner("Loading Mistral-7B model (this may take a moment)..."):
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-        
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-            device_map="auto" if device == "cuda" else None,
+    with st.spinner("Loading Mistral-7B model from Hugging Face Inference..."):
+        llm = HuggingFaceHub(
+            repo_id="mistralai/Mistral-7B-Instruct-v0.3",
+            huggingfacehub_api_token=hf_token,
+            model_kwargs={"temperature": 0.7, "max_new_tokens": 256}
         )
-        
-        if device == "cpu":
-            model = model.to("cpu")
-        
-        text_gen_pipeline = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            max_new_tokens=256,
-            temperature=0.7,
-            top_p=0.95,
-            repetition_penalty=1.1,
-            device=0 if device == "cuda" else -1,
-        )
-        
-        llm = HuggingFacePipeline(pipeline=text_gen_pipeline)
     
     # Build chain
     prompt_template = ChatPromptTemplate.from_template(
@@ -136,6 +125,10 @@ def rebuild_vector_db():
     documents = []
     pdf_files = list(Path(PDF_FOLDER).glob("*.pdf"))
     
+    if not pdf_files:
+        st.error(f"No PDFs found in {PDF_FOLDER}")
+        return
+    
     progress_bar = st.progress(0)
     for idx, pdf_path in enumerate(pdf_files):
         try:
@@ -168,7 +161,6 @@ def rebuild_vector_db():
         vector_store.save_local(VECTOR_DB_PATH)
     
     st.success("Vector database rebuilt successfully!")
-    # Clear cache to reload the pipeline
     st.cache_resource.clear()
 
 # Sidebar
@@ -192,9 +184,17 @@ with st.sidebar:
     This is a RAG (Retrieval-Augmented Generation) chatbot that answers questions 
     based on your PDF documents.
     
-    **Model**: Mistral-7B-Instruct  
+    **Model**: Mistral-7B-Instruct (via HF Inference)  
     **Embeddings**: All-MiniLM-L6-v2  
     **Vector DB**: FAISS
+    """)
+    
+    st.divider()
+    st.subheader("📝 Setup Required")
+    st.write("""
+    1. Get a Hugging Face API token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+    2. Add it as an environment variable: `HF_TOKEN`
+    3. On Streamlit Cloud, use "Manage App" → "Secrets"
     """)
 
 # Main chat interface
@@ -220,7 +220,9 @@ for message in st.session_state.messages:
         if message.get("sources"):
             sources_html = "<div class='source-box'><strong>📄 Sources:</strong><br/>"
             for i, source in enumerate(message["sources"], 1):
-                sources_html += f"{i}. <strong>{source['file']}</strong> (Page {source['page']})<br/>"
+                file_name = source.metadata.get("source", "Unknown") if hasattr(source, 'metadata') else "Unknown"
+                page_num = source.metadata.get("page", "N/A") if hasattr(source, 'metadata') else "N/A"
+                sources_html += f"{i}. <strong>{file_name}</strong> (Page {page_num})<br/>"
             sources_html += "</div>"
         
         st.markdown(f"""
@@ -256,32 +258,17 @@ if send_button and user_input:
     
     # Get response from RAG pipeline
     with st.spinner("Thinking..."):
-        result = process_query(user_input)
-        
-        # Format sources
-        sources = []
-        source_docs = result.get("sources", result.get("context", []))
-        
-        # Handle both list and Document objects
-        if source_docs:
-            for doc in source_docs:
-                if hasattr(doc, 'metadata'):
-                    sources.append({
-                        "file": doc.metadata.get("source", "Unknown"),
-                        "page": doc.metadata.get("page", "N/A"),
-                    })
-                else:
-                    sources.append({
-                        "file": "Unknown",
-                        "page": "N/A",
-                    })
-        
-        # Add assistant response to chat history
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": result["answer"],
-            "sources": sources
-        })
+        try:
+            result = process_query(user_input)
+            
+            # Add assistant response to chat history
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": result["answer"],
+                "sources": result.get("sources", [])
+            })
+        except Exception as e:
+            st.error(f"Error processing query: {str(e)}")
     
     # Rerun to display new message
     st.rerun()
