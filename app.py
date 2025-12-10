@@ -205,7 +205,7 @@ def process_query(question, model_id):
         
     except Exception as e:
         import traceback
-        error_details = traceback.format_exc()
+        error_details = str(e)
         
         print("\n" + "="*60)
         print("❌ ERROR:")
