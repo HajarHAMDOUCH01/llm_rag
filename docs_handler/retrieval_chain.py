@@ -53,8 +53,7 @@ class RAGPipeline:
         
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            torch_dtype=torch.float16,
-            device_map="auto" if self.device == "cuda" else None,
+            torch_dtype=torch.float16
         )
         
         model = model.to(self.device)
@@ -67,8 +66,7 @@ class RAGPipeline:
             max_new_tokens=256,
             temperature=0.7,
             top_p=0.95,
-            repetition_penalty=1.1,
-            device=0 if self.device == "cuda" else -1,  # -1 for CPU
+            repetition_penalty=1.1
         )
         
         return HuggingFacePipeline(pipeline=text_gen_pipeline)
