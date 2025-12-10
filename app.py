@@ -19,7 +19,7 @@ EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
 # Updated models that work with Inference API
 SUPPORTED_MODELS = {
-    "Mistral-7B-Instruct": "mistralai/Mistral-7B-Instruct-v0.2",
+    "google/gemma-3-12b-it": "google/gemma-3-12b-it",
     "Flan-T5-Large": "google/flan-t5-large",
     "Flan-T5-Base": "google/flan-t5-base",
 }
