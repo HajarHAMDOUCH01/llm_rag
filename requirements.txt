@@ -1,0 +1,1 @@
+pip install -qU langchain-community pypdf
