@@ -19,6 +19,17 @@ PDF_FOLDER = "./pdfs"
 MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.3"
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 
+# List of verified working models
+SUPPORTED_MODELS = {
+    "Mistral-7B": "mistralai/Mistral-7B",
+    "Meta Llama-2 7B Chat": "meta-llama/Llama-2-7b-chat-hf",
+    "Meta Llama-2 13B Chat": "meta-llama/Llama-2-13b-chat-hf",
+    "Google Flan-T5 Base": "google/flan-t5-base",
+    "Google Flan-T5 Large": "google/flan-t5-large",
+    "Huggingface Zephyr 7B": "HuggingFaceH4/zephyr-7b-beta",
+    "NeuralHermes 2.5 7B": "NousResearch/Hermes-2.5-Mistral-7B",
+}
+
 # Page config
 st.set_page_config(
     page_title="PDF RAG Chatbot",
@@ -39,11 +50,11 @@ st.markdown("""
     }
     .user-message {
         background-color: black;
-        border-left: 4px solid blue;
+        border-left: 4px solid #2196F3;
     }
     .assistant-message {
         background-color: black;
-        border-left: 4px solid blue;
+        border-left: 4px solid #4CAF50;
     }
     .source-box {
         background-color: black;
@@ -51,13 +62,13 @@ st.markdown("""
         border-radius: 0.25rem;
         margin-top: 0.5rem;
         font-size: 0.9rem;
-        border-left: 3px solid blue;
+        border-left: 3px solid #FBC02D;
     }
 </style>
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def load_rag_pipeline():
+def load_rag_pipeline(model_id):
     """Load RAG pipeline using Hugging Face Inference API"""
     
     hf_token = os.getenv("HF_TOKEN")
@@ -84,12 +95,14 @@ def load_rag_pipeline():
         )
         retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     
-    with st.spinner("Loading meta-llama/Llama-3.2-3B model from Hugging Face Inference..."):
+    with st.spinner(f"Loading {model_id} from Hugging Face Inference..."):
         try:
             llm = HuggingFaceEndpoint(
-                repo_id="JetBrains/Mellum-4b-base", 
+                repo_id=model_id,
                 huggingfacehub_api_token=hf_token,
-                max_new_tokens=512
+                max_new_tokens=512,
+                temperature=0.7,
+                top_p=0.95
             )
         except Exception as e:
             st.error(f"Failed to load model: {str(e)}")
@@ -113,9 +126,9 @@ Answer:"""
     
     return chain
 
-def process_query(question):
+def process_query(question, model_id):
     """Process user question through RAG pipeline"""
-    chain = load_rag_pipeline()
+    chain = load_rag_pipeline(model_id)
     
     try:
         result = chain.invoke({"input": question})
@@ -188,6 +201,15 @@ def rebuild_vector_db():
 with st.sidebar:
     st.title("⚙️ Settings")
     
+    # Model selection
+    st.subheader("🤖 Select Model")
+    selected_model_name = st.selectbox(
+        "Choose a model:",
+        options=list(SUPPORTED_MODELS.keys()),
+        index=0
+    )
+    selected_model_id = SUPPORTED_MODELS[selected_model_name]
+    
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔄 Rebuild Vector DB", use_container_width=True):
@@ -204,11 +226,10 @@ with st.sidebar:
     st.write("""
     This is a RAG (Retrieval-Augmented Generation) chatbot that answers questions 
     based on your PDF documents.
-    
-    **Model**: Mistral-7B-Instruct (via HF Inference)  
-    **Embeddings**: All-MiniLM-L6-v2  
-    **Vector DB**: FAISS
     """)
+    st.write(f"**Selected Model**: {selected_model_name}")
+    st.write("**Embeddings**: All-MiniLM-L6-v2")
+    st.write("**Vector DB**: FAISS")
     
     st.divider()
     st.subheader("📝 Setup Required")
@@ -220,6 +241,10 @@ with st.sidebar:
 
 # Main chat interface
 st.title("📚 PDF RAG Chatbot")
+
+# Store selected model in session
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = selected_model_id
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -280,7 +305,7 @@ if send_button and user_input:
     # Get response from RAG pipeline
     with st.spinner("Thinking..."):
         try:
-            result = process_query(user_input)
+            result = process_query(user_input, selected_model_id)
             
             # Add assistant response to chat history
             st.session_state.messages.append({
