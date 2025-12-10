@@ -121,30 +121,32 @@ def process_query(question, model_id):
     chain = load_rag_pipeline(model_id)
     try:
         result = chain.invoke({"input": question})
-        
-        # Debug: print the result structure
-        print("Result keys:", result.keys())
-        print("Full result:", result)
 
-        # Try to extract the answer from different possible keys
         answer = (
-            result.get("answer") 
+            result.get("output_text") 
+            or result.get("answer") 
             or result.get("output") 
-            or result.get("output_text")
             or ""
         )
 
         if not answer.strip():
             answer = "❌ Model returned an empty response."
 
-        return {
-            "answer": answer,
-            "sources": result.get("context", [])
-        }
+        # This section is commented out - you're not returning anything!
+        # return {
+        #     "answer": answer,
+        #     "sources": result.get("context", [])
+        # }
+        
+        try:
+            print(answer)  # for debugging
+            print(answer.keys())
+        except Exception as e:
+            print(e)
 
     except Exception as e:
         return {
-            "answer": f"Error: {str(e)}",
+            "answer": f"Error: {e}",
             "sources": []
         }
 
