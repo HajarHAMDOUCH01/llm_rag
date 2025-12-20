@@ -1,24 +1,9 @@
-# Core LLM & RAG Framework
 langchain
 langchain-core
 langchain-community
-langchain-huggingface
-huggingface-hub
-
-# Hugging Face Models & Transformers
-transformers
-torch
-sentence-transformers
-
-# Vector Database
+sentence_transformers
+langchain-ollama
 faiss-cpu
-
-# PDF Processing
 pypdf
-
-# Web Framework
-streamlit
-
-# Utilities
 python-dotenv
 tqdm

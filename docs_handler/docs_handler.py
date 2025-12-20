@@ -10,9 +10,9 @@ import sys
 sys.path.append("/kaggle/working/llm_rag")
 
 # Configuration
-PDF_FOLDER = "/kaggle/working/llm_rag/pdfs"  # Folder where your PDFs are stored
-VECTOR_DB_PATH = "/kaggle/working/llm_rag/vector_db"  # Where to save the vector database
-EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"  # Lightweight, fast embedding model
+PDF_FOLDER = "/kaggle/working/llm_rag/pdfs"  
+VECTOR_DB_PATH = "/kaggle/working/llm_rag/vector_db"  
+EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"  
 
 def load_pdfs(pdf_folder):
     """
@@ -130,7 +130,6 @@ if __name__ == "__main__":
     vector_store = setup_pipeline(PDF_FOLDER, VECTOR_DB_PATH)
     
     if vector_store:
-        # Quick test: search for something
         query = "What is this documents about?"
         results = vector_store.similarity_search(query, k=3)
         print(f"\nTest search for '{query}':")
