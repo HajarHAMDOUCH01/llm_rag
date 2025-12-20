@@ -1,8 +1,6 @@
-langchain
-langchain-core
-langchain-community
+# langchain
+huggingface-hub
 sentence_transformers
-langchain-ollama
 faiss-cpu
 pypdf
 python-dotenv
