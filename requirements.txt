@@ -1,5 +1,10 @@
-# langchain
+langchain
+langsmith
 huggingface-hub
+langchain_huggingface
+langchain_ollama
+langchain_core
+langchain_community
 sentence_transformers
 faiss-cpu
 pypdf

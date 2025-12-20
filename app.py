@@ -4,12 +4,12 @@ from flask_cors import CORS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import ChatOllama
-from langchain.chains import RetrievalQA
+from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.prompts import PromptTemplate
 
 # Configuration
 VECTOR_DB_PATH = "./vector_db"
-OLLAMA_MODEL = "gemini-3-pro-preview"  
+OLLAMA_MODEL = "nemotron-3-nano:30b-cloud"  
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
 OLLAMA_BASE_URL = "http://localhost:11434"
 
