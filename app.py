@@ -1,4 +1,6 @@
 import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import ChatOllama
@@ -9,7 +11,10 @@ from langchain.prompts import PromptTemplate
 VECTOR_DB_PATH = "./vector_db"
 OLLAMA_MODEL = "gemini-3-pro-preview"  
 EMBEDDINGS_MODEL = "all-MiniLM-L6-v2"
-OLLAMA_BASE_URL = "http://localhost:11434"  
+OLLAMA_BASE_URL = "http://localhost:11434"
+
+app = Flask(__name__)
+CORS(app)
 
 class LocalRAGPipeline:
     def __init__(self, vector_db_path, ollama_model, embeddings_model=EMBEDDINGS_MODEL):
@@ -39,7 +44,7 @@ class LocalRAGPipeline:
             temperature=0.7,
             top_p=0.95,
             top_k=40,
-            num_ctx=4096,  # Context window size
+            num_ctx=4096,
         )
         
         print("Building retrieval chain...")
@@ -103,42 +108,43 @@ Answer:"""
             "sources": source_info
         }
 
+# Initialize RAG pipeline
+print("Initializing RAG Pipeline...")
+rag = LocalRAGPipeline(
+    vector_db_path=VECTOR_DB_PATH,
+    ollama_model=OLLAMA_MODEL,
+    embeddings_model=EMBEDDINGS_MODEL
+)
 
-def main():
-    """Initialize pipeline and run interactive chat"""
-    
-    # Initialize RAG pipeline
-    rag = LocalRAGPipeline(
-        vector_db_path=VECTOR_DB_PATH,
-        ollama_model=OLLAMA_MODEL,
-        embeddings_model=EMBEDDINGS_MODEL
-    )
-    
-    # Interactive chat loop
-    print("=" * 60)
-    print("Local RAG Chatbot (Ollama)")
-    print("Type 'exit' to quit")
-    print("=" * 60 + "\n")
-    
-    while True:
-        question = input("Q: ").strip()
-        
-        if question.lower() == 'exit':
-            print("Goodbye!")
-            break
+@app.route('/api/query', methods=['POST'])
+def query():
+    """API endpoint for querying the RAG system"""
+    try:
+        data = request.json
+        question = data.get('question', '')
         
         if not question:
-            continue
+            return jsonify({"error": "No question provided"}), 400
         
-        print("\nProcessing...\n")
         result = rag.query(question)
-        
-        print(f"A: {result['answer']}\n")
-        print("Sources:")
-        for i, source in enumerate(result["sources"], 1):
-            print(f"{i}. {source['file']} (Page {source['page']})")
-            print(f"   {source['text']}\n")
-        print("-" * 60 + "\n")
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({"status": "ok"})
+
+def main():
+    """Run Flask server"""
+    print("=" * 60)
+    print("Local RAG API Server")
+    print("Access the web interface at: http://localhost:5000")
+    print("=" * 60 + "\n")
+    
+    app.run(host='0.0.0.0', port=5000, debug=False)
 
 if __name__ == "__main__":
     main()
